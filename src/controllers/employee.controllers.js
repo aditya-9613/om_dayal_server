@@ -68,7 +68,7 @@ const logoutEmployee = asyncHandler(async (req, res) => {
 
     const currentDate = new Date()
     employee.workDates.push(currentDate)
-    employee.workDates.push('Logged Out At')
+    employee.sessionsType.push('Logged Out At')
 
     const options = {
         httpOnly: true,
