@@ -49,6 +49,7 @@ const loginEmployee = asyncHandler(async (req, res) => {
     const currentDate = new Date()
     employee.workDates.push(currentDate)
     employee.sessionsType.push('Login Done At')
+    employee.save({ validateBeforeSave: false })
 
     const employeeCode = employee.employeeCode
 
@@ -69,6 +70,7 @@ const logoutEmployee = asyncHandler(async (req, res) => {
     const currentDate = new Date()
     employee.workDates.push(currentDate)
     employee.sessionsType.push('Logged Out At')
+    employee.save({validateBeforeSave:false})
 
     const options = {
         httpOnly: true,
