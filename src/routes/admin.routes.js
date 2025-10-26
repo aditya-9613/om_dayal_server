@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addEmployee, adminLogout, benchEmployee, changePassword, getEmployeesDetails, loginAdmin, refreshAccessToken, releaseEmployee, updateEmployeeDetails } from "../controllers/admin.controllers.js";
+import { addEmployee, adminLogout, benchEmployee, changePassword, getEmployeesDetails, loginAdmin, refreshAccessToken, releaseEmployee, updateEmployeeDetails, workStats } from "../controllers/admin.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 
@@ -33,6 +33,7 @@ router.route('/updateEmployee').put(verifyJWT,
     updateEmployeeDetails
 )
 router.route('/changePassword').put(verifyJWT, changePassword)
+router.route('/workingStats').get(verifyJWT,workStats)
 
 
 

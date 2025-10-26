@@ -1,6 +1,7 @@
 import { Admin } from '../models/admin.model.js';
 import { Employee } from '../models/employee.model.js';
 import { EmployeeDetails } from '../models/employeeDetails.model.js';
+import { Lead } from '../models/lead.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -443,8 +444,8 @@ const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required Inputs')
     }
 
-    if (newPassword!==confirmPassword) {
-        throw new ApiError(403,'Password Mismatch')
+    if (newPassword !== confirmPassword) {
+        throw new ApiError(403, 'Password Mismatch')
     }
 
     const admin = await Admin.findById(req.admin._id)
@@ -473,6 +474,53 @@ const changePassword = asyncHandler(async (req, res) => {
         )
 })
 
+const workStats = asyncHandler(async (req, res) => {
+    const { employeeCode } = req.query
+
+    if (employeeCode === '' || !employeeCode) {
+        throw new ApiError(400, 'Required Inputs')
+    }
+
+    const findLeads = await Lead.find({ employeeCode: employeeCode })
+
+    let counts = {
+        New: 0,
+        open: 0,
+        fixed: 0,
+        archived: 0,
+        pending: 0,
+        progess: 0,
+        cancelled: 0
+    };
+
+    var report = []
+
+    for (const lead of findLeads) {
+        if (Array.isArray(lead.leadStatus) && lead.leadStatus.length > 0) {
+            const lastStatus = lead.leadStatus[lead.leadStatus.length - 1];
+            // Normalize to lowercase for consistency
+            const normalized = lastStatus.toLowerCase();
+
+            // Find matching key (case-insensitive)
+            for (const key in counts) {
+                if (key.toLowerCase() === normalized) {
+                    counts[key] += 1;
+                    break;
+                }
+            }
+        }
+
+        report.push(lead.report_id)
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, { counts, report }, 'Leads Counts')
+        )
+
+})
+
 export {
     loginAdmin,
     adminLogout,
@@ -482,5 +530,6 @@ export {
     refreshAccessToken,
     getEmployeesDetails,
     updateEmployeeDetails,
-    changePassword
+    changePassword,
+    workStats
 }

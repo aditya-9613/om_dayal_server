@@ -1,5 +1,6 @@
 import { Employee } from '../models/employee.model.js'
 import { EmployeeDetails } from '../models/employeeDetails.model.js'
+import { Lead } from '../models/lead.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -45,6 +46,10 @@ const loginEmployee = asyncHandler(async (req, res) => {
 
     const employee = await EmployeeDetails.findOne({ employeeUsername: employeeUsername })
 
+    const currentDate = new Date()
+    employee.workDates.push(currentDate)
+    employee.workDates.push('Login Done At')
+
     const employeeCode = employee.employeeCode
 
     return res
@@ -56,6 +61,15 @@ const loginEmployee = asyncHandler(async (req, res) => {
 })
 
 const logoutEmployee = asyncHandler(async (req, res) => {
+
+    const employeeDetails = await Employee.findById(req.employee._id)
+
+    const employee = await EmployeeDetails.findOne({ username: employeeDetails.username })
+
+    const currentDate = new Date()
+    employee.workDates.push(currentDate)
+    employee.workDates.push('Logged Out At')
+
     const options = {
         httpOnly: true,
         secure: true
