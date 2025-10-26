@@ -48,7 +48,7 @@ const loginEmployee = asyncHandler(async (req, res) => {
 
     const currentDate = new Date()
     employee.workDates.push(currentDate)
-    employee.workDates.push('Login Done At')
+    employee.sessionsType.push('Login Done At')
 
     const employeeCode = employee.employeeCode
 
