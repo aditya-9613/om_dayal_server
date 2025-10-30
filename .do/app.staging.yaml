@@ -1,0 +1,105 @@
+#################################################################################
+# DigitalOcean App Platform - Staging Environment
+# Deploy with: doctl apps create --spec .do/app.staging.yaml
+#################################################################################
+
+name: om-dayal-crm-staging
+region: blr1
+
+ingress:
+  rules:
+    - component:
+        name: api
+      cors:
+        allow_origins:
+          - prefix: https://
+            regex: "^https://.*"  # More permissive for staging
+        allow_methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allow_headers:
+          - Content-Type
+          - Authorization
+          - Cookie
+        allow_credentials: true
+        max_age: "3600"
+
+services:
+  - name: api
+    github:
+      repo: aditya-9613/om_dayal_server
+      branch: develop  # Staging branch (create this branch)
+      deploy_on_push: true
+    
+    build_command: npm install
+    run_command: npm start
+    
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    
+    # Minimal resources for staging
+    instance_count: 1
+    instance_size_slug: basic-xxs  # $5/month (512MB RAM)
+    
+    http_port: 8080
+    
+    routes:
+      - path: /
+    
+    envs:
+      - key: NODE_ENV
+        value: "staging"
+        scope: RUN_TIME
+      
+      - key: PORT
+        value: "8080"
+        scope: RUN_TIME
+      
+      - key: ORIGIN
+        value: "*"  # Permissive for staging testing
+        scope: RUN_TIME
+      
+      # Staging secrets (use separate staging database)
+      - key: MONGODB_URI
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: ACCESS_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: REFRESH_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_EXPIRY
+        value: "1d"
+        scope: RUN_TIME
+      
+      - key: REFRESH_TOKEN_EXPIRY
+        value: "10d"
+        scope: RUN_TIME
+      
+      - key: CLOUDINARY_CLOUD_NAME
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: CLOUDINARY_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: CLOUDINARY_API_SECRET
+        scope: RUN_TIME
+        type: SECRET

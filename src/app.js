@@ -14,6 +14,14 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
 
+// Health check endpoint for monitoring
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    })
+})
 
 import adminRouter from './routes/admin.routes.js'
 import employeeRouter from './routes/employee.routes.js'

@@ -1,0 +1,177 @@
+#################################################################################
+# DigitalOcean App Platform Specification
+# Deploy with: doctl apps create --spec .do/app.yaml
+# Update with: doctl apps update <app-id> --spec .do/app.yaml
+#################################################################################
+
+name: om-dayal-crm
+region: blr1  # Bangalore region (change to: nyc (New York), sfo (San Francisco), sgp (Singapore), lon (London), fra (Frankfurt))
+
+# Ingress configuration (routing and CORS)
+ingress:
+  rules:
+    - component:
+        name: api
+      cors:
+        allow_origins:
+          - prefix: https://
+            regex: "^https://.*\\.yourdomain\\.com$"  # Update with your actual domain pattern
+        allow_methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allow_headers:
+          - Content-Type
+          - Authorization
+          - Cookie
+        allow_credentials: true
+        max_age: "3600"
+
+# Services (main application)
+services:
+  - name: api
+    github:
+      repo: aditya-9613/om_dayal_server  # Update with your GitHub username/repo
+      branch: main
+      deploy_on_push: true  # Automatic deployment on git push
+    
+    # Build configuration
+    build_command: npm install
+    
+    # Run configuration
+    run_command: npm start
+    
+    # Health check endpoint
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    
+    # Resource allocation
+    instance_count: 1
+    instance_size_slug: professional-xs  # professional-xs = $12/month (1GB RAM, 1 vCPU)
+    # Options: basic-xxs ($5, 512MB), professional-xs ($12, 1GB), professional-s ($24, 2GB)
+    
+    # HTTP configuration
+    http_port: 8080
+    
+    # Routes
+    routes:
+      - path: /
+    
+    # Environment variables
+    envs:
+      # Application
+      - key: NODE_ENV
+        value: "production"
+        scope: RUN_TIME
+      
+      - key: PORT
+        value: "8080"
+        scope: RUN_TIME
+      
+      # CORS - Update with your frontend domain
+      - key: ORIGIN
+        value: "https://yourdomain.com"  # CRITICAL: Update this
+        scope: RUN_TIME
+      
+      # MongoDB - Add your connection string
+      - key: MONGODB_URI
+        value: "REPLACE_WITH_YOUR_MONGODB_CONNECTION_STRING"
+        type: SECRET
+        scope: RUN_TIME
+      
+      # JWT Secrets - Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+      - key: ACCESS_TOKEN_SECRET
+        value: "REPLACE_WITH_64_CHAR_HEX_STRING"
+        type: SECRET
+        scope: RUN_TIME
+      
+      - key: REFRESH_TOKEN_SECRET
+        value: "REPLACE_WITH_64_CHAR_HEX_STRING"
+        type: SECRET
+        scope: RUN_TIME
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_SECRET
+        value: "REPLACE_WITH_64_CHAR_HEX_STRING"
+        type: SECRET
+        scope: RUN_TIME
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_EXPIRY
+        value: "1d"
+        scope: RUN_TIME
+      
+      - key: REFRESH_TOKEN_EXPIRY
+        value: "10d"
+        scope: RUN_TIME
+      
+      # Cloudinary Configuration
+      - key: CLOUDINARY_CLOUD_NAME
+        value: "REPLACE_WITH_YOUR_CLOUDINARY_CLOUD_NAME"
+        scope: RUN_TIME
+      
+      - key: CLOUDINARY_API_KEY
+        value: "REPLACE_WITH_YOUR_CLOUDINARY_API_KEY"
+        type: SECRET
+        scope: RUN_TIME
+      
+      - key: CLOUDINARY_API_SECRET
+        value: "REPLACE_WITH_YOUR_CLOUDINARY_API_SECRET"
+        type: SECRET
+        scope: RUN_TIME
+
+# Optional: Static sites (if you want to serve frontend from same app)
+# static_sites:
+#   - name: frontend
+#     github:
+#       repo: cyhiiii/om_dayal_client
+#       branch: main
+#       deploy_on_push: true
+#     build_command: npm run build
+#     output_dir: dist
+#     routes:
+#       - path: /
+
+# Optional: Workers (background jobs)
+# workers:
+#   - name: email-worker
+#     github:
+#       repo: cyhiiii/om_dayal_server
+#       branch: main
+#       deploy_on_push: true
+#     build_command: npm install
+#     run_command: node src/workers/email.js
+#     instance_count: 1
+#     instance_size_slug: basic-xxs
+#     envs:
+#       - key: NODE_ENV
+#         value: "production"
+
+# Optional: Jobs (scheduled tasks)
+# jobs:
+#   - name: daily-report
+#     github:
+#       repo: cyhiiii/om_dayal_server
+#       branch: main
+#       deploy_on_push: true
+#     build_command: npm install
+#     run_command: node src/jobs/daily-report.js
+#     instance_count: 1
+#     instance_size_slug: basic-xxs
+#     kind: PRE_DEPLOY  # or POST_DEPLOY, FAILED_DEPLOY
+#     envs:
+#       - key: NODE_ENV
+#         value: "production"
+
+# Optional: Databases (if using DigitalOcean managed DB)
+# databases:
+#   - name: om-dayal-db
+#     engine: MONGODB
+#     version: "6"
+#     production: true
+#     cluster_name: om-dayal-cluster
