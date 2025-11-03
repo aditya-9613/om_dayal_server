@@ -4,9 +4,35 @@ import cookieParser from "cookie-parser"
 
 const app = express()
 
+// Validate and configure CORS
+const configureCors = () => {
+    const origin = process.env.ORIGIN;
+    
+    if (!origin) {
+        console.warn('⚠️  Warning: ORIGIN environment variable is not set. Allowing all origins with credentials.');
+        return true; // Allow all origins dynamically
+    }
+    
+    if (origin.trim() === '') {
+        console.warn('⚠️  Warning: ORIGIN environment variable is empty. Allowing all origins with credentials.');
+        return true;
+    }
+    
+    if (origin === '*') {
+        // When credentials are needed, we can't use '*', so we use a function to allow all origins
+        return true;
+    }
+    
+    // Split comma-separated origins and trim whitespace
+    return origin.split(',').map(o => o.trim()).filter(o => o.length > 0);
+}
+
 app.use(cors({
-    origin: process.env.ORIGIN === '*' ? '*' : process.env.ORIGIN.split(','),
-    credentials: true
+    origin: configureCors(),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie']
 }))
 
 app.use(express.json({ limit: "1mb" }))

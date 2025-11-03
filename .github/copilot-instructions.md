@@ -1,28 +1,18 @@
 # OM Dayal CRM Server - AI Agent Instructions
 
 ## Architecture Overview
-This is an **Express.js + MongoDB CRM backend** for managing leads, employees, teachers, and payments. The system has two auth roles: **Admin** (full CRUD) and **Employee** (limited access).
+This is an **Express.js + MongoDB CRM backend** for managing leads, employees, teachers, and payments. The system has two auth roles: **Admin** (full CRUD) and **Employee** (read-only on leads/requirements).
 
-- **Entry point**: `src/index.js` (dotenv + DB connection) → `src/app.js` (Express setup with middleware)
-- **Database**: MongoDB via Mongoose (`src/db/index.js`), DB name: `"OMDT"` from `src/constant.js`
+- **Entry point**: `src/index.js` → `src/app.js` (Express setup)
+- **Database**: MongoDB via Mongoose (`src/db/index.js`), DB name from `src/constant.js`
 - **API routes**: Mounted at `/api/v1/{admin,employee,lead,teacher,report,payment}`
 - **Models**: Located in `src/models/` — use Mongoose schemas with bcrypt pre-hooks and JWT methods for Admin/Employee models
-- **Health check**: `GET /health` returns `{ status, timestamp, uptime }` (used by DigitalOcean)
 
 ## Development Workflow
 ```bash
-npm run dev   # Development: nodemon with dotenv auto-reload
-npm start     # Production: node src/index.js (used in deployment)
+npm run dev  # Starts nodemon with dotenv (src/index.js)
 ```
-
-**No tests, linters, or build steps** currently configured. Add new routes in `src/routes/`, controllers in `src/controllers/`, and models in `src/models/`.
-
-### Deployment
-- **Platform**: DigitalOcean App Platform (Infrastructure as Code via YAML)
-- **Scripts**: `scripts/deploy.sh [staging|production]` — creates/updates app using `.do/app.{env}.yaml`
-- **Secrets**: Configure via `scripts/setup-secrets.sh [env]` or DigitalOcean dashboard
-- **Regions**: `blr1` (Bangalore) for production, see `.do/app.*.yaml` for configuration
-- **Docs**: See `DEPLOYMENT.md` for full deployment guide and `.do/README.md` for App Spec details
+No tests, linters, or build steps currently configured. Add new routes in `src/routes/`, controllers in `src/controllers/`, and models in `src/models/`.
 
 ## Core Conventions
 
@@ -41,17 +31,11 @@ const myController = asyncHandler(async (req, res) => {
 })
 ```
 
-### Authentication & Dual Route Pattern
-- **Admin**: JWT auth via `verifyJWT` middleware (`src/middlewares/auth.middlewares.js`)
-  - Uses `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET`
-  - Routes at `/api/v1/{resource}/{action}` (e.g., `/api/v1/lead/createLead`)
-- **Employee**: JWT auth via `employeeVerifyJWT` middleware
-  - Uses `EMPLOYEE_ACCESS_TOKEN_SECRET`
-  - Duplicate routes with `Empl` prefix: `/api/v1/lead/createEmplLead` (same controller, different auth)
-- **Cookies**: `httpOnly: true, secure: true` for both `accessToken` and `refreshToken`
-- **Models**: `Admin` and `Employee` models have:
-  - `pre("save")` hook for bcrypt password hashing (10 rounds)
-  - Instance methods: `isPasswordCorrect()`, `genrateAccessToken()`, `genrateRefreshToken()` ⚠️ Note typo: "genrate" not "generate"
+### Authentication
+- **Admin**: JWT auth via `verifyJWT` middleware (src/middlewares/auth.middlewares.js). Tokens use `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` env vars.
+- **Employee**: JWT auth via `employeeVerifyJWT` middleware. Uses `EMPLOYEE_ACCESS_TOKEN_SECRET`.
+- Cookies: `httpOnly: true, secure: true` for both `accessToken` and `refreshToken`.
+- Models (`Admin`, `Employee`) have pre-save hooks for bcrypt hashing and instance methods for `isPasswordCorrect()`, `genrateAccessToken()`, `genrateRefreshToken()`.
 
 ### File Uploads (Multer → Cloudinary)
 1. **Multer** saves files to `public/temp/` (see `src/middlewares/multer.middlewares.js`)
@@ -64,27 +48,18 @@ const myController = asyncHandler(async (req, res) => {
    - Upload in sequence with `for...of` loop (not `.forEach`)
    - Store URLs in DB after all uploads succeed
 
-### Custom ID Generation & String-Based Foreign Keys
+### Custom ID Generation
 Use functions from `src/utils/CreateIDs.js`:
-- `genrateLeadID()` → `"OMD{rand}{AB}{rand}LD"` (always check uniqueness in DB after generation)
-- `generateTeacherID()` → `"OMD-TH/{YY}/{rand}"` (e.g., `"OMD-TH/25/007"`)
+- `genrateLeadID()` → `"OMD{rand}{AB}{rand}LD"` (ensure uniqueness with DB check)
+- `generateTeacherID()` → `"OMD-TH/{YY}/{rand}"`
 - `generateReportId(reportName)` → extracts type+date from report name
 
-**Derived IDs**: Replace suffix of `leadID` to create related IDs:
-- `leadID.replace('LD', 'RQ')` → Requirement ID (see `lead.controllers.js:allotLeads`)
-- `leadID.replace('LD', 'SL')` → Student ID
-
-**Foreign Keys**: Models use **string fields** (`employeeCode`, `leadID`) as foreign keys, **NOT** ObjectId refs. Query with string matches: `Lead.findOne({ leadID: "OMD12AB34LD" })`
+Derived IDs: Replace suffix of `leadID` (e.g., `LD` → `RQ` for requirements, `LD` → `SL` for students).
 
 ### Database Patterns
-- **Array fields**: `leadStatus` and `leadDates` in Lead model are arrays. To add entries:
-  ```javascript
-  findLead.leadStatus.push(newStatus)
-  findLead.leadDates.push(new Date())
-  await findLead.save()
-  ```
-- **No ObjectId refs**: All relationships use string fields (`employeeCode`, `leadID`), never Mongoose `ref` or `populate()`
-- **Timestamps**: All models use `{ timestamps: true }` (auto `createdAt`, `updatedAt`)
+- **Array fields**: `leadStatus` and `leadDates` in Lead model are arrays; push new status/date with `.push()` and `.save()`
+- **References**: Use string fields (`employeeCode`, `leadID`) as foreign keys, not ObjectId refs
+- **Timestamps**: All models use `{ timestamps: true }`
 
 ## Key Modules & External Dependencies
 - **bcrypt** (v6.0.0): Password hashing (10 rounds in Admin/Employee models)
@@ -100,8 +75,8 @@ Use functions from `src/utils/CreateIDs.js`:
 - `EMPLOYEE_ACCESS_TOKEN_EXPIRY`, `REFRESH_TOKEN_EXPIRY`
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 
-## Common Pitfalls & Known Issues
-- **Do NOT** use `.forEach` for async file uploads (promises won't be awaited). Use `for...of` instead (see `admin.controllers.js:addEmployee`).
-- **Always** check `employeeStatus` before allotting leads/creating requirements
-- **Consistent typo**: Method is `genrateAccessToken()` (not "generate") — keep this spelling throughout codebase
-- **Bug in `admin.controllers.js:refreshAccessToken`**: References undefined `user` variable (should be `admin`) on lines 75 and 84
+## Common Pitfalls
+- **Do NOT** use `.forEach` for async file uploads (promises won't be awaited). Use `for...of` instead.
+- **Always** check `employeeStatus` before allotting leads (see `lead.controllers.js:allotLeads`)
+- **Typo in Admin model**: `genrateAccessToken` (not "generate") — keep consistent with existing codebase
+- **Refresh token endpoint** (`admin.controllers.js:refreshAccessToken`) references undefined `user` variable (should be `admin`)
