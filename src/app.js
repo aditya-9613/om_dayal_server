@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser"
 const app = express()
 
 app.use(cors({
-    origin: (process.env.ORIGIN).split(','),
+    origin: process.env.ORIGIN === '*' ? '*' : process.env.ORIGIN.split(','),
     credentials: true
 }))
 
@@ -14,6 +14,27 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
 
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: 'OM Dayal CRM Server',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+            health: '/health',
+            api: '/api/v1'
+        }
+    })
+})
+
+// Health check endpoint for monitoring
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    })
+})
 
 import adminRouter from './routes/admin.routes.js'
 import employeeRouter from './routes/employee.routes.js'

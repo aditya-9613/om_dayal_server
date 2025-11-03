@@ -1,0 +1,107 @@
+#################################################################################
+# DigitalOcean App Platform - Production Environment
+# Deploy with: doctl apps create --spec .do/app.production.yaml
+#################################################################################
+
+name: om-dayal-crm-prod
+region: blr1  # Bangalore - closest to India
+
+services:
+  - name: api
+    github:
+      repo: aditya-9613/om_dayal_server
+      branch: main  # Production branch
+      deploy_on_push: true
+    
+    build_command: npm ci --production  # Clean install, production only
+    run_command: npm start
+    
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    
+    # Production resources
+    instance_count: 2  # 2 instances for high availability
+    instance_size_slug: professional-xs  # $12/month per instance = $24 total
+    
+    http_port: 8080
+    
+    routes:
+      - path: /
+    
+    cors:
+      allow_origins:
+        - regex: .*
+      allow_methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allow_headers:
+        - Content-Type
+        - Authorization
+        - Cookie
+      allow_credentials: true
+    
+    # Production environment variables (use secrets from DO dashboard or doctl)
+    envs:
+      - key: NODE_ENV
+        value: "production"
+        scope: RUN_TIME
+      
+      - key: PORT
+        value: "8080"
+        scope: RUN_TIME
+      
+      # Use environment-specific secrets (configure via doctl or dashboard)
+      - key: ORIGIN
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: MONGODB_URI
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: ACCESS_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: REFRESH_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: EMPLOYEE_ACCESS_TOKEN_EXPIRY
+        value: "1d"
+        scope: RUN_TIME
+      
+      - key: REFRESH_TOKEN_EXPIRY
+        value: "10d"
+        scope: RUN_TIME
+      
+      - key: CLOUDINARY_CLOUD_NAME
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: CLOUDINARY_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      
+      - key: CLOUDINARY_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+# Alerts for production monitoring (app-level, not service-level)
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DEPLOYMENT_LIVE
+  - rule: DOMAIN_FAILED
+  - rule: DOMAIN_LIVE
