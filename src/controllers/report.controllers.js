@@ -53,7 +53,7 @@ const createReport = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'Server Error')
     }
 
-    const leads = await Lead.findOne({leadID:leadID})
+    const leads = await Lead.findOne({ leadID: leadID })
     leads.report_id.push(report_id)
     leads.save()
 
@@ -72,9 +72,22 @@ const searchReport = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required Fields')
     }
 
-    const findReport = await Report.findOne({ report_id: report_id })
+    const date = new Date(report_id);
+    const findReport = await Report.find({
+        $or: [
+            { report_id: report_id },
+            { reportName: { $regex: report_id, $options: "i" } },
 
-    if (!findReport) {
+            !isNaN(date.getTime()) && {
+                reportDate: {
+                    $gte: new Date(date.setHours(0, 0, 0, 0)),
+                    $lte: new Date(date.setHours(23, 59, 59, 999))
+                }
+            }
+        ].filter(Boolean)
+    });
+
+    if (findReport.length === 0) {
         throw new ApiError(404, 'Report Missing')
     }
 
@@ -100,28 +113,28 @@ const viewUnviewedReport = asyncHandler(async (req, res) => {
         )
 })
 
-const viewReport = asyncHandler(async (req,res) => {
-    const {report_id} = req.body
+const viewReport = asyncHandler(async (req, res) => {
+    const { report_id } = req.body
 
-    if (report_id==='') {
-        throw new ApiError(400,'Required Inputs')
+    if (report_id === '') {
+        throw new ApiError(400, 'Required Inputs')
     }
 
-    const updateView = await Report.updateOne({report_id},
+    const updateView = await Report.updateOne({ report_id },
         {
-            view:true
+            view: true
         }
     )
 
     if (!updateView.acknowledged) {
-        throw new ApiError(500,'Report Not Viewed')
+        throw new ApiError(500, 'Report Not Viewed')
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,{},'Report Viewed')
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, {}, 'Report Viewed')
+        )
 })
 
 export {
