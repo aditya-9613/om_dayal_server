@@ -510,7 +510,10 @@ const workStats = asyncHandler(async (req, res) => {
             }
         }
 
-        report.push(lead.report_id)
+        if (lead.report_id?.length>0) {
+            report.push(lead.report_id)
+        }
+        
     }
 
     return res
