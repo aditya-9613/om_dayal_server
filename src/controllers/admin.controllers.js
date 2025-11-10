@@ -80,7 +80,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true
+            secure: true,
+            sameSite: 'none'
         }
 
         const { accessToken, newRefreshToken } = await genrateAccessAndRefreshTokens(user._id)
@@ -105,13 +106,22 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 //Login Controller
 
 const loginAdmin = asyncHandler(async (req, res) => {
-    const { username, password } = req.body
+    const { username, email, password } = req.body
 
-    if (username === "" || password === "") {
+    // Accept either username or email
+    const loginIdentifier = username || email
+
+    if (!loginIdentifier || password === "" || !password) {
         throw new ApiError(400, 'Required Inputs')
     }
 
-    const findAdmin = await Admin.findOne({ username: username })
+    // Find admin by username or email
+    const findAdmin = await Admin.findOne({
+        $or: [
+            { username: loginIdentifier },
+            { email: loginIdentifier }
+        ]
+    })
 
     if (!findAdmin) {
         throw new ApiError(401, 'Wrong Credentials')
@@ -128,7 +138,8 @@ const loginAdmin = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'none'
     }
 
     return res
@@ -161,7 +172,8 @@ const adminLogout = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'none'
     }
 
     return res

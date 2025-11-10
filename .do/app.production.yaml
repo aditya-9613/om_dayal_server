@@ -24,9 +24,9 @@ services:
       success_threshold: 1
       failure_threshold: 3
     
-    # Production resources
-    instance_count: 2  # 2 instances for high availability
-    instance_size_slug: professional-xs  # $12/month per instance = $24 total
+    # Production resources - Cost optimized
+    instance_count: 1  # 1 instance - $5/month total
+    instance_size_slug: basic-xxs  # 512MB RAM, 1 vCPU - $5/month
     
     http_port: 8080
     
