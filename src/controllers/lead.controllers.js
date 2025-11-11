@@ -301,8 +301,8 @@ const getAllLeadsDetails = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "students", // Collection name in MongoDB (should be lowercase and plural)
-                localField: "leadID",
-                foreignField: "leadID",
+                localField: leadID,
+                foreignField: leadID,
                 as: "student"
             }
         },
@@ -317,8 +317,8 @@ const getAllLeadsDetails = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "requirements",
-                localField: "leadID",
-                foreignField: "leadID",
+                localField: leadID,
+                foreignField: leadID,
                 as: "requirement"
             }
         },
