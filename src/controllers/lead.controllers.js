@@ -284,7 +284,7 @@ const getRequirementWithLeadID = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(
-            new ApiResponse(200, { requirement,studentDetails }, 'Requirement fetched successfully')
+            new ApiResponse(200, { requirement, studentDetails }, 'Requirement fetched successfully')
         );
 })
 
@@ -297,12 +297,15 @@ const getAllLeadsDetails = asyncHandler(async (req, res) => {
     }
 
     const leads = await Lead.aggregate([
+        {
+            $match: { leadID: leadID }
+        },
         // Lookup Student by leadID
         {
             $lookup: {
                 from: "students", // Collection name in MongoDB (should be lowercase and plural)
-                localField: leadID,
-                foreignField: leadID,
+                localField: "leadID",
+                foreignField: "leadID",
                 as: "student"
             }
         },
@@ -317,8 +320,8 @@ const getAllLeadsDetails = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "requirements",
-                localField: leadID,
-                foreignField: leadID,
+                localField: "leadID",
+                foreignField: "leadID",
                 as: "requirement"
             }
         },
