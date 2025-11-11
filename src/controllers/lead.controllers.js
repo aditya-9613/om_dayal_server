@@ -275,6 +275,8 @@ const getRequirementWithLeadID = asyncHandler(async (req, res) => {
 
     const requirement = await Requirement.findOne({ leadID });
 
+    const studentDetails = await Student.findOne({ leadID })
+
     if (!requirement) {
         throw new ApiError(404, 'Requirement not found');
     }
@@ -282,7 +284,7 @@ const getRequirementWithLeadID = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(
-            new ApiResponse(200, { requirement }, 'Requirement fetched successfully')
+            new ApiResponse(200, { requirement,studentDetails }, 'Requirement fetched successfully')
         );
 })
 
