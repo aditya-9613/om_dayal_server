@@ -267,7 +267,7 @@ const changeLeadStatus = asyncHandler(async (req, res) => {
 })
 
 const getRequirementWithLeadID = asyncHandler(async (req, res) => {
-    const { leadID } = req.params;
+    const { leadID } = req.query;
 
     if (!leadID || leadID.trim() === '') {
         throw new ApiError(400, 'Lead ID is required');
