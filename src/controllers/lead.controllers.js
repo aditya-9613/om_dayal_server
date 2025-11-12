@@ -11,10 +11,10 @@ import { genrateLeadID } from '../utils/CreateIDs.js'
 
 const createLead = asyncHandler(async (req, res) => {
 
-    const { email, mobile, leadType, leadStatus, longitude, latitude, address, alternateNo, leadDate, leadSource, name } = req.body
+    const { email, mobile, leadType, leadStatus, longitude, latitude, address, alternateNo, leadDates, leadSource, name } = req.body
 
     if (
-        [email, mobile, leadType, leadStatus, longitude, latitude, address, alternateNo, leadDate, leadSource, name].some((item) => item === '' || item === undefined)
+        [email, mobile, leadType, leadStatus, longitude, latitude, address, alternateNo, leadDates, leadSource, name].some((item) => item === '' || item === undefined)
     ) {
         throw new ApiError(400, 'All fields are required')
     }
@@ -30,7 +30,7 @@ const createLead = asyncHandler(async (req, res) => {
         }
     }
 
-    var dates = new Date(leadDate)
+    var dates = new Date(leadDates)
     // set time to current time
     dates.setHours(new Date().getHours())
     dates.setMinutes(new Date().getMinutes())
