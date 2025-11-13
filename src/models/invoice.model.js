@@ -27,6 +27,14 @@ const InvoiceSchema = new Schema({
         type: String,
         required: String
     },
+    tax:{
+        type:String,
+        required:true
+    },
+    finalAmount:{
+        type:String,
+        required:true
+    },
     dueDate: {
         type: String,
         required: true
@@ -34,6 +42,10 @@ const InvoiceSchema = new Schema({
     paymentType: {
         type: String,
         required: true
+    },
+    remarks:{
+        type:String,
+        required:true
     }
 },
     {

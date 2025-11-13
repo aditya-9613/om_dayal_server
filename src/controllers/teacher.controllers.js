@@ -6,6 +6,7 @@ import { Teacher } from '../models/teacher.model.js';
 import { generateTeacherID } from '../utils/CreateIDs.js';
 import { Lead } from '../models/lead.model.js';
 import { Job } from '../models/job.model.js';
+import { Student } from '../models/student.model.js';
 
 
 const haversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -53,9 +54,13 @@ const createTeacher = asyncHandler(async (req, res) => {
                 }
                 return { [file[0].fieldname]: uploadResult.secure_url };
             }
-            return null; // In case file.path is undefined
+            return null; // skip invalid file
         })
-    )
+    );
+
+    // Filter out nulls and merge into one object
+    const mergedFiles = Object.assign({}, ...filesUploaded.filter(Boolean));
+
 
     var createTeacherID;
     let isUnique = false;
@@ -70,7 +75,7 @@ const createTeacher = asyncHandler(async (req, res) => {
 
     const createTeacher = await Teacher.create({
         teacher_id: createTeacherID,
-        teacherImage: filesUploaded?.teacherImage || null,
+        teacherImage: mergedFiles?.teacherImage || null,
         teacherName: teacherName,
         teacherEmail: teacherEmail,
         teacherMobile: teacherMobile,
@@ -84,9 +89,9 @@ const createTeacher = asyncHandler(async (req, res) => {
         alternateContact: alternateContact || null,
         address: address,
         adharCardNo: adharCardNo || null,
-        adharCardFront: filesUploaded?.adharCardFront || null,
-        adharCardBack: filesUploaded?.adharCardBack || null,
-        highestQualificationCertificate: filesUploaded?.highestQualificationCertificate || null
+        adharCardFront: mergedFiles?.adharCardFront || null,
+        adharCardBack: mergedFiles?.adharCardBack || null,
+        highestQualificationCertificate: mergedFiles?.highestQualificationCertificate || null
     })
 
     if (!createTeacher) {
@@ -108,6 +113,7 @@ const updateTeacherDetails = asyncHandler(async (req, res) => {
     if (
         [teacher_id, teacherName, teacherEmail, teacherMobile, dateOfBirth, professionalExperience, stream, latitude, longitude, address].some((item) => item === '' || item === undefined)
     ) {
+        console.log(teacher_id, teacherName, teacherEmail, teacherMobile, dateOfBirth, professionalExperience, stream, latitude, longitude, address)
         throw new ApiError(400, 'All fields are required');
     }
 
@@ -126,12 +132,15 @@ const updateTeacherDetails = asyncHandler(async (req, res) => {
                 if (!uploadResult.secure_url) {
                     throw new ApiError(501, 'File upload failed');
                 }
-                await removeFromCloudinary(existedTeacher[file[0].fieldname]);
                 return { [file[0].fieldname]: uploadResult.secure_url };
             }
-            return null; // In case file.path is undefined
+            return null; // skip invalid file
         })
-    )
+    );
+
+    // Filter out nulls and merge into one object
+    const mergedFiles = Object.assign({}, ...filesUploaded.filter(Boolean));
+
 
     existedTeacher.teacherName = teacherName;
     existedTeacher.teacherEmail = teacherEmail;
@@ -146,10 +155,10 @@ const updateTeacherDetails = asyncHandler(async (req, res) => {
     existedTeacher.alternateContact = alternateContact || null;
     existedTeacher.address = address;
     existedTeacher.adharCardNo = adharCardNo || null;
-    existedTeacher.adharCardFront = filesUploaded?.adharCardFront ? filesUploaded.adharCardFront : existedTeacher.adharCardFront;
-    existedTeacher.adharCardBack = filesUploaded?.adharCardBack ? filesUploaded.adharCardBack : existedTeacher.adharCardBack;
-    existedTeacher.highestQualificationCertificate = filesUploaded?.highestQualificationCertificate ? filesUploaded.highestQualificationCertificate : existedTeacher.highestQualificationCertificate;
-    existedTeacher.teacherImage = filesUploaded?.teacherImage ? filesUploaded.teacherImage : existedTeacher.teacherImage;
+    existedTeacher.adharCardFront = mergedFiles?.adharCardFront ? mergedFiles.adharCardFront : existedTeacher.adharCardFront;
+    existedTeacher.adharCardBack = mergedFiles?.adharCardBack ? mergedFiles.adharCardBack : existedTeacher.adharCardBack;
+    existedTeacher.highestQualificationCertificate = mergedFiles?.highestQualificationCertificate ? mergedFiles.highestQualificationCertificate : existedTeacher.highestQualificationCertificate;
+    existedTeacher.teacherImage = mergedFiles?.teacherImage ? mergedFiles.teacherImage : existedTeacher.teacherImage;
     await existedTeacher.save();
 
     return res
@@ -196,6 +205,10 @@ const searchTeachersForLead = asyncHandler(async (req, res) => {
 
     const lead = await Lead.findOne({ leadID });
 
+    const studentDetails = await Student.findOne({ leadID })
+
+    const subjects = studentDetails.subjects?.join(',')
+
     if (!lead) {
         throw new ApiError(404, 'Lead not found');
     }
@@ -208,10 +221,29 @@ const searchTeachersForLead = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'Invalid latitude, longitude, or range');
     }
 
-    const teachers = await Teacher.find();
+    //if ALl Subjects written in any case is there then no need of subject match but if not this then match the subject
+
+    const teachers = await Teacher.find({
+        stream: {
+            $elemMatch: {
+                class: studentDetails.class,
+            }
+        }
+    }).lean();
+
+    const teachersFiltered = teachers.filter(teacher => {
+        const teacherSubjects = teacher.stream?.map(s => s.subject.toLowerCase()) || [];
+        const studentSubjects = studentDetails.subjects?.map(s => s.toLowerCase()) || [];
+
+        // if teacher has "All Subjects" -> accept directly
+        if (teacherSubjects.includes('all subjects')) return true;
+
+        // otherwise, at least one subject must match
+        return studentSubjects.some(sub => teacherSubjects.includes(sub));
+    });
 
     // Filter teachers manually by calculating distance
-    const teachersInRange = teachers.filter(teacher => {
+    const teachersInRange = teachersFiltered.filter(teacher => {
         const teacherLat = parseFloat(teacher.latitude);
         const teacherLon = parseFloat(teacher.longitude);
 
@@ -344,7 +376,7 @@ const commentTeacher = asyncHandler(async (req, res) => {
     const findJOB = await Job.findOne({ leadID: leadID })
 
     if (!findJOB) {
-        throw new ApiError(404,'Job Not Found')
+        throw new ApiError(404, 'Job Not Found')
     }
 
     const findTeacherIndex = (findJOB.teacher_id).indexOf(teacher_id)
@@ -352,10 +384,10 @@ const commentTeacher = asyncHandler(async (req, res) => {
     findJOB.save()
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,{},'Teacher Remark Given')
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, {}, 'Teacher Remark Given')
+        )
 })
 
 export {

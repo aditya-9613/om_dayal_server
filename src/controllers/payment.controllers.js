@@ -8,10 +8,10 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 
 const createInvoice = asyncHandler(async (req, res) => {
 
-    const { leadID, invoice_date, totalAmount, dueDate, paymentType } = req.body
+    const { leadID, invoice_date, tax, totalAmount, dueDate, paymentType, remarks } = req.body
 
     if (
-        [leadID, invoice_date, totalAmount, dueDate, paymentType].some((item) =>
+        [leadID, invoice_date, tax, totalAmount, dueDate, paymentType, remarks].some((item) =>
             item === '' || item === undefined)
     ) {
         throw new ApiError(400, 'Required Inputs')
@@ -43,11 +43,14 @@ const createInvoice = asyncHandler(async (req, res) => {
         invoice_no: invoice_no,
         leadID: leadID,
         invoice_date: invoice_date,
+        tax: tax,
         totalAmount: totalAmount,
+        finalAmount: (Number(tax) + Number(totalAmount)),
         dueDate: dueDate,
         student_id: getJobDetails.studentID,
         teacher_id: getJobDetails.teacher_id[getJobDetails.teacher_id.length - 1],
         paymentType: paymentType,
+        remarks: remarks
     })
 
     if (!createInvoiceInDatabase) {

@@ -71,7 +71,7 @@ const logoutEmployee = asyncHandler(async (req, res) => {
     const currentDate = new Date()
     employee.workDates.push(currentDate)
     employee.sessionsType.push('Logged Out At')
-    employee.save({validateBeforeSave:false})
+    employee.save({ validateBeforeSave: false })
 
     const options = {
         httpOnly: true,
@@ -82,9 +82,8 @@ const logoutEmployee = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
         .json(
-            new ApiResponse(200, {}, "Admin Logged Out Successfully")
+            new ApiResponse(200, {}, "Employee Logged Out Successfully")
         )
 })
 
