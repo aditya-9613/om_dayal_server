@@ -1,5 +1,6 @@
 import { Invoice } from '../models/invoice.model.js'
 import { Job } from '../models/job.model.js'
+import { Lead } from '../models/lead.model.js'
 import { Receipt } from '../models/receipt.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
@@ -105,7 +106,42 @@ const viewInvoice = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required Field')
     }
 
-    const findInvoices = await Invoice.find({ leadID: leadID })
+    const findInvoices = await Invoice.aggregate([
+        {
+            $match: { leadID: leadID } // match the leadID first
+        },
+        {
+            $lookup: {
+                from: "requirements",        // name of the collection (not model)
+                localField: "leadID",        // field in Invoice
+                foreignField: "leadID",      // field in Requirement
+                as: "requirements"           // output array field
+            }
+        },
+        {
+            $lookup: {
+                from: "teachers",
+                localField: "teacher_id",
+                foreignField: "teacher_id",
+                as: "teachers"
+            }
+        },
+        {
+            $lookup: {
+                from: 'students',
+                localField: 'student_id',
+                foreignField: 'studentID',
+                as: 'students'
+            }
+        },
+        {
+            $addFields: {
+                requirements: { $arrayElemAt: ["$requirements", 0] },
+                teachers: { $arrayElemAt: ["$teachers", 0] },
+                students: { $arrayElemAt: ["$students", 0] }
+            }
+        }
+    ]);
 
     if (findInvoices.length === 0) {
         throw new ApiError(404, 'No Invoices Found')
