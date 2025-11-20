@@ -113,7 +113,6 @@ const updateTeacherDetails = asyncHandler(async (req, res) => {
     if (
         [teacher_id, teacherName, teacherEmail, teacherMobile, dateOfBirth, professionalExperience, stream, latitude, longitude, address].some((item) => item === '' || item === undefined)
     ) {
-        console.log(teacher_id, teacherName, teacherEmail, teacherMobile, dateOfBirth, professionalExperience, stream, latitude, longitude, address)
         throw new ApiError(400, 'All fields are required');
     }
 
