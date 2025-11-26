@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { employeeVerifyJWT, verifyJWT } from "../middlewares/auth.middlewares.js";
-import { allotLeads, assignTeachers, changeLeadStatus, createLead, getAllLeads, getAllLeadsDetails, postRequirement, searchLeads, updateRequirement, getRequirementWithLeadID } from "../controllers/lead.controllers.js";
+import { allotLeads, assignTeachers, changeLeadStatus, createLead, getAllLeads, getAllLeadsDetails, postRequirement, searchLeads, updateRequirement, getRequirementWithLeadID, leadStatusData } from "../controllers/lead.controllers.js";
 
 
 const router = Router()
@@ -16,6 +16,7 @@ router.route('/getLeadsAllData').get(verifyJWT, getAllLeadsDetails)
 router.route('/updateRequirement').put(verifyJWT, updateRequirement)
 router.route('/assignTeacher').put(verifyJWT, assignTeachers)
 router.route('/getFullRequirements').get(verifyJWT, getRequirementWithLeadID)
+router.route('/leadStatusAllData').get(verifyJWT, leadStatusData)
 
 //Employee routes
 router.route('/createEmplLead').post(employeeVerifyJWT, createLead)
@@ -27,6 +28,7 @@ router.route('/getLeadsAllDataEmployee').get(employeeVerifyJWT, getAllLeadsDetai
 router.route('/updateRequirementEmployee').put(employeeVerifyJWT, updateRequirement)
 router.route('/assignTeacherEmployee').put(employeeVerifyJWT, assignTeachers)
 router.route('/getFullRequirementsEmp').get(employeeVerifyJWT, getRequirementWithLeadID)
+router.route('/leadStatusAllDataEmp').get(employeeVerifyJWT, leadStatusData)
 
 
 export default router

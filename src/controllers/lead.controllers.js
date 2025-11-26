@@ -607,6 +607,39 @@ const assignTeachers = asyncHandler(async (req, res) => {
         )
 })
 
+const leadStatusData = asyncHandler(async (req, res) => {
+    const findAllLeads = await Lead.find();
+
+    const allLeadData = {
+        New: 0,
+        Open: 0,
+        Progress: 0,
+        Fixed: 0,
+        Archived: 0,
+        Pending: 0,
+        Cancelled: 0
+    };
+
+    findAllLeads.forEach(item => {
+        const leadStatusArray = item.leadStatus;
+
+        if (Array.isArray(leadStatusArray) && leadStatusArray.length > 0) {
+            const lastStatus = leadStatusArray[leadStatusArray.length - 1];
+
+            if (allLeadData.hasOwnProperty(lastStatus)) {
+                allLeadData[lastStatus] += 1;
+            }
+        }
+    });
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,{allLeadData},'All Data')
+    )
+
+})
+
 export {
     createLead,
     allotLeads,
@@ -618,5 +651,6 @@ export {
     updateLeadsExcel,
     getAllLeadsDetails,
     updateRequirement,
-    assignTeachers
+    assignTeachers,
+    leadStatusData
 }
