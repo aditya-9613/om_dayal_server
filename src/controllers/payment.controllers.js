@@ -1,6 +1,5 @@
 import { Invoice } from '../models/invoice.model.js'
 import { Job } from '../models/job.model.js'
-import { Lead } from '../models/lead.model.js'
 import { Receipt } from '../models/receipt.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
@@ -70,7 +69,9 @@ const collectPayment = asyncHandler(async (req, res) => {
     const { invoice_no, paymentDate, leadID, paidAmount, transactionID, totalAmount, remainingAmount } = req.body
 
     if (
-        [invoice_no, paymentDate, leadID, paidAmount, transactionID, totalAmount, remainingAmount,]
+        [invoice_no, paymentDate, leadID, paidAmount, transactionID, totalAmount, remainingAmount].some(item =>
+            item === null || item === undefined || (typeof item === 'string' && item.trim() === "")
+        )
     ) {
         throw new ApiError(400, 'Required Inputs')
     }
@@ -161,7 +162,118 @@ const viewReceipt = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required Field')
     }
 
-    const findInvoices = await Invoice.find({ leadID: leadID })
+    const findInvoices = await Receipt.aggregate([
+        // Match receipts for the given leadID
+        { $match: { leadID: leadID } },
+
+        // Lookup corresponding invoice
+        {
+            $lookup: {
+                from: 'invoices',
+                localField: 'invoice_no',
+                foreignField: 'invoice_no',
+                as: 'invoiceDetails'
+            }
+        },
+        { $unwind: '$invoiceDetails' }, // Flatten the invoice array
+
+        // Lookup teacher details
+        {
+            $lookup: {
+                from: 'teachers',
+                localField: 'invoiceDetails.teacher_id',
+                foreignField: 'teacher_id',
+                as: 'teacher'
+            }
+        },
+        { $unwind: '$teacher' },
+
+        // Lookup student details
+        {
+            $lookup: {
+                from: 'students',
+                localField: 'invoiceDetails.student_id',
+                foreignField: 'studentID',
+                as: 'student'
+            }
+        },
+        { $unwind: '$student' },
+
+        // Lookup requirement details
+        {
+            $lookup: {
+                from: 'requirements',
+                localField: 'leadID',
+                foreignField: 'leadID',
+                as: 'requirements'
+            }
+        },
+        { $unwind: '$requirements' },
+
+        // Project only the fields we need
+        {
+            $project: {
+                receipt_no: 1,
+                paymentDate: 1,
+                leadID: 1,
+                invoice_no: 1,
+                transactionID: 1,
+                totalAmount: 1,
+                paymentType: '$invoiceDetails.paymentType',
+                remarks: '$invoiceDetails.remarks',
+                tax: '$invoiceDetails.tax',
+                teacherName: '$teacher.teacherName',
+                teacherMobile: '$teacher.teacherMobile',
+                teacherAddress: '$teacher.address',
+                studentName: '$student.name',
+                parentContact: '$student.parentContact',
+                studentAddress: '$student.address',
+                boards: '$student.boards',
+                subjects: {
+                    $reduce: {
+                        input: '$student.subjects',
+                        initialValue: '',
+                        in: { $concat: ['$$value', { $cond: [{ $eq: ['$$value', ''] }, '', ','] }, '$$this'] }
+                    }
+                },
+                teachingClass: '$requirements.studentClass',
+                sitting: '$requirements.sitting'
+            }
+        }
+    ]);
+
+    // var allReceipts = await Receipt.find({ leadID: leadID })
+    // var findInvoices = []
+
+    // for (const item of allReceipts) {
+    //     const invoiceDetails = await Invoice.findOne({ invoice_no: item.invoice_no });
+    //     const teacher = await Teacher.findOne({ teacher_id: invoiceDetails.teacher_id });
+    //     const student = await Student.findOne({ studentID: invoiceDetails.student_id });
+    //     const requirements = await Requirement.findOne({ leadID: item.leadID });
+
+    //     findInvoices.push({
+    //         receipt_no: item.receipt_no,
+    //         paymentDate: item.paymentDate,
+    //         leadID: item.leadID,
+    //         invoice_no: item.invoice_no,
+    //         transactionID: item.transactionID,
+    //         totalAmount: item.totalAmount,
+    //         paymentType: invoiceDetails.paymentType,
+    //         remarks: invoiceDetails.remarks,
+    //         tax: invoiceDetails.tax,
+    //         teacherName: teacher.teacherName,
+    //         teacherMobile: teacher.teacherMobile,
+    //         teacherAddress: teacher.address,
+    //         studentName: student.name,
+    //         parentContact: student.parentContact,
+    //         studentAddress: student.address,
+    //         boards: student.boards,
+    //         subjects: student.subjects.join(','),
+    //         teachingClass: requirements.studentClass,
+    //         sitting: requirements.sitting
+    //     });
+    // }
+
 
     if (findInvoices.length === 0) {
         throw new ApiError(404, 'No Invoices Found')
@@ -204,6 +316,18 @@ const cancelReceiptOrInvoice = asyncHandler(async (req, res) => {
         )
 })
 
+const allRecordsPayments = asyncHandler(async (req, res) => {
+
+    const receipt = await Receipt.find()
+
+    const Invoices = await Invoice.find()
+
+    return res.
+        status(200)
+        .json(
+            new ApiResponse(200, { receipt, Invoices }, 'Records')
+        )
+})
 
 export {
     createInvoice,
@@ -211,4 +335,5 @@ export {
     viewInvoice,
     viewReceipt,
     cancelReceiptOrInvoice,
+    allRecordsPayments
 }
