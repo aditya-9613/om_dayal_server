@@ -528,10 +528,10 @@ tutionPlace
 })
 
 const updateRequirement = asyncHandler(async (req, res) => {
-    const { leadID, name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference } = req.body
+    const { leadID, name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference } = req.body.updatedData
 
     if (
-        [name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference].some(item => item.trim() === '' || item === undefined)
+        [name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference].some(item => item === '' || item === undefined)
     ) {
         throw new ApiError(400, 'Required Inputs')
     }
