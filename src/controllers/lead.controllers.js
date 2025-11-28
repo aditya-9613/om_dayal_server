@@ -535,6 +535,7 @@ const updateRequirement = asyncHandler(async (req, res) => {
     ) {
         throw new ApiError(400, 'Required Inputs')
     }
+     console.log(name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference)
 
     const updateRequirement = await Requirement.updateOne(
         { leadID: leadID },
@@ -558,13 +559,23 @@ const updateRequirement = asyncHandler(async (req, res) => {
             fatherName: fatherName,
             motherName: motherName,
             email: email,
-            mobile: mobile,
-            alternateNo: alternateNo,
+            parentContact: mobile,
+            alternateNumber: alternateNo,
             address: address,
         }
     )
 
-    if (!updateStudent.acknowledged || !updateRequirement) {
+    const updateLead = await Lead.updateOne(
+        {leadID:leadID},
+    {
+        email:email,
+        mobile:mobile,
+        address:address,
+        alternateNo:alternateNo,
+        name:name
+    })
+
+    if (!updateStudent.acknowledged || !updateRequirement.acknowledged||!updateLead.acknowledged) {
         throw new ApiError(500, 'Update Failed')
     }
 
