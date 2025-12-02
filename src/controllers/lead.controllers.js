@@ -64,82 +64,112 @@ const createLead = asyncHandler(async (req, res) => {
 })
 
 const allotLeads = asyncHandler(async (req, res) => {
-    const { leadID, employeeCode } = req.body
+    const { leadID, employeeCode } = req.body;
 
-    if (leadID === '' || leadID === undefined || employeeCode === '' || employeeCode === undefined) {
-        throw new ApiError(400, 'All fields are required')
+    if (!leadID || !employeeCode) {
+        throw new ApiError(400, "All fields are required");
     }
 
-    const findLead = await Lead.findOne({ leadID: leadID })
+    const findLead = await Lead.findOne({ leadID });
 
     if (!findLead) {
-        throw new ApiError(404, 'Lead not found')
+        throw new ApiError(404, "Lead not found");
     }
 
-    const findEmployeeInLead = await Requirement.findOne({ leadID: leadID, employeeCode: employeeCode })
+    // Check if requirement exists
+    const existingRequirement = await Requirement.findOne({ leadID });
+    const existingStudent = await Student.findOne({ leadID });
+    const existingJob = await Job.findOne({ leadID });
 
-    if (findEmployeeInLead) {
-        throw new ApiError(422, 'This lead is already allotted to this employee')
+    /** ------------------------------------
+     * CASE 1: FIRST TIME → CREATE DOCUMENTS
+     ---------------------------------------*/
+    if (!existingRequirement || !existingStudent || !existingJob) {
+        const requirementID = leadID.replace("LD", "RQ");
+        const studentID = leadID.replace("LD", "SL");
+
+        if (existingStudent) {
+            throw new ApiError(423, "Student with this leadID already exists");
+        }
+
+        await Requirement.create({
+            leadID,
+            employeeCode,
+            requirementID,
+            tutionPlace: "",
+            studentClass: "",
+            sitting: "",
+            duration: "",
+            budget: "",
+            genderPreference: ""
+        });
+
+        await Student.create({
+            leadID,
+            studentID,
+            name: findLead.name,
+            email: findLead.email,
+            address: findLead.address,
+            class: "",
+            boards: "",
+            subjects: [],
+            fatherName: "",
+            motherName: "",
+            parentContact: findLead.mobile,
+            alternateNumber: findLead.alternateNo
+        });
+
+        await Job.create({
+            leadID,
+            jobID: leadID.replace("LD", "JO"),
+            employeeCode,
+            studentID,
+            teacher_id: [],
+            remark: []
+        });
+
+        findLead.employeeCode = employeeCode;
+        await findLead.save();
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { leadID }, "Lead allotted successfully"));
     }
 
-    var requirementID = leadID.replace('LD', 'RQ')
-    var studentID = leadID.replace('LD', 'SL')
+    /** ------------------------------------
+     * CASE 2: SECOND TIME → JUST UPDATE
+     ---------------------------------------*/
 
-    const exisedStudent = await Student.findOne({ leadID: leadID })
+    // Prevent assigning same lead to same employee again
+    const alreadyAllottedToSameEmployee = await Requirement.findOne({
+        leadID,
+        employeeCode
+    });
 
-    if (exisedStudent) {
-        throw new ApiError(423, 'Student with this leadID already exists')
+    if (alreadyAllottedToSameEmployee) {
+        throw new ApiError(422, "This lead is already allotted to this employee");
     }
 
-    const createRequirement = await Requirement.create({
-        leadID: leadID,
-        employeeCode: employeeCode,
-        requirementID: requirementID,
-        tutionPlace: '',
-        studentClass: '',
-        sitting: '',
-        duration: '',
-        budget: '',
-        genderPreference: ''
-    })
+    // Update Requirement
+    await Requirement.updateOne(
+        { leadID },
+        { $set: { employeeCode } }
+    );
 
-    const createStudent = await Student.create({
-        leadID: leadID,
-        studentID: studentID,
-        name: findLead.name,
-        email: findLead.email,
-        address: findLead.address,
-        class: '',
-        boards: '',
-        subjects: [],
-        fatherName: '',
-        motherName: '',
-        parentContact: findLead.mobile,
-        alternateNumber: findLead.alternateNo
-    })
+    // Update Job
+    await Job.updateOne(
+        { leadID },
+        { $set: { employeeCode } }
+    );
 
-    const createJob = await Job.create({
-        leadID: leadID,
-        jobID: leadID.replace('LD', 'JO'),
-        employeeCode: employeeCode,
-        studentID: studentID,
-        teacher_id: [],
-        remark: [],
-    })
-
-    findLead.employeeCode = employeeCode
-    findLead.save()
-
-    if (!createRequirement || !createStudent || !createJob) {
-        throw new ApiError(500, 'Allotment failed')
-    }
+    // Update Lead
+    findLead.employeeCode = employeeCode;
+    await findLead.save();
 
     return res
         .status(200)
-        .json(
-            new ApiResponse(200, { leadID }, 'Lead allotted successfully')
-        )
-})
+        .json(new ApiResponse(200, { leadID }, "Lead Alloted successfully"));
+});
 
 const postRequirement = asyncHandler(async (req, res) => {
 
@@ -535,7 +565,7 @@ const updateRequirement = asyncHandler(async (req, res) => {
     ) {
         throw new ApiError(400, 'Required Inputs')
     }
-     console.log(name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference)
+    console.log(name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference)
 
     const updateRequirement = await Requirement.updateOne(
         { leadID: leadID },
@@ -566,16 +596,16 @@ const updateRequirement = asyncHandler(async (req, res) => {
     )
 
     const updateLead = await Lead.updateOne(
-        {leadID:leadID},
-    {
-        email:email,
-        mobile:mobile,
-        address:address,
-        alternateNo:alternateNo,
-        name:name
-    })
+        { leadID: leadID },
+        {
+            email: email,
+            mobile: mobile,
+            address: address,
+            alternateNo: alternateNo,
+            name: name
+        })
 
-    if (!updateStudent.acknowledged || !updateRequirement.acknowledged||!updateLead.acknowledged) {
+    if (!updateStudent.acknowledged || !updateRequirement.acknowledged || !updateLead.acknowledged) {
         throw new ApiError(500, 'Update Failed')
     }
 
@@ -644,10 +674,10 @@ const leadStatusData = asyncHandler(async (req, res) => {
     });
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,{allLeadData},'All Data')
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, { allLeadData }, 'All Data')
+        )
 
 })
 
