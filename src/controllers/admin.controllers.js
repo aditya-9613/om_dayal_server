@@ -364,7 +364,10 @@ const releaseEmployee = asyncHandler(async (req, res) => {
 
 const getEmployeesDetails = asyncHandler(async (req, res) => {
 
-    const getEmployee = await EmployeeDetails.find()
+    const getEmployee = await EmployeeDetails.find({
+        employeeStatus: { $ne: 'Release' }
+    });
+
 
     return res
         .status(200)
@@ -522,10 +525,10 @@ const workStats = asyncHandler(async (req, res) => {
             }
         }
 
-        if (lead.report_id?.length>0) {
+        if (lead.report_id?.length > 0) {
             report.push(lead.report_id)
         }
-        
+
     }
 
     return res

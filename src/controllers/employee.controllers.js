@@ -135,7 +135,7 @@ const getEmployeeDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required Inputs')
     }
 
-    const findEmployee = await EmployeeDetails.findOne({ employeeCode: employeeCode })
+    const findEmployee = await EmployeeDetails.findOne({ employeeCode: employeeCode ,  employeeStatus: { $ne: 'Release' }})
 
     if (!findEmployee) {
         throw new ApiError(404, 'Employee Not Found')
