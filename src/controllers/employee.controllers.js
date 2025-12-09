@@ -66,8 +66,8 @@ const logoutEmployee = asyncHandler(async (req, res) => {
 
     const employeeDetails = await Employee.findById(req.employee._id)
 
-    const employee = await EmployeeDetails.findOne({ username: employeeDetails.username })
-
+    const employee = await EmployeeDetails.findOne({ employeeUsername: employeeDetails.employeeUsername })
+      
     const currentDate = new Date()
     employee.workDates.push(currentDate)
     employee.sessionsType.push('Logged Out At')
