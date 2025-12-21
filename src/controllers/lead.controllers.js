@@ -565,7 +565,6 @@ const updateRequirement = asyncHandler(async (req, res) => {
     ) {
         throw new ApiError(400, 'Required Inputs')
     }
-    console.log(name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference)
 
     const updateRequirement = await Requirement.updateOne(
         { leadID: leadID },
@@ -617,12 +616,22 @@ const updateRequirement = asyncHandler(async (req, res) => {
 })
 
 const assignTeachers = asyncHandler(async (req, res) => {
-    const { leadID, teacher_id } = req.body
+    const { leadID, teacher_id, previousTeacher_id, cancellationReason } = req.body
 
     if (
-        [leadID, teacher_id].some(item => item === '' || !item)
+        [leadID, teacher_id, previousTeacher_id, cancellationReason].some(item => item === '' || !item)
     ) {
         throw new ApiError(400, 'Required Inputs')
+    }
+
+    if (teacher_id === previousTeacher_id) {
+        throw new ApiError(400, 'Cannot assign the same teacher')
+    }
+
+    const findLead = await Lead.findOne({ leadID: leadID })
+
+    if (!findLead || (findLead.status[findLead.status.length - 1] === 'Cancelled' || findLead.status[findLead.status.length - 1] === 'Archived' || findLead.status[findLead.status.length - 1] === 'Fixed')) {
+        throw new ApiError(400, 'You cannot assign teacher to cancelled,archived or fixed leads please change the lead status first')
     }
 
     const teacher = await Teacher.findOne({ teacher_id: teacher_id })
@@ -638,8 +647,9 @@ const assignTeachers = asyncHandler(async (req, res) => {
     }
 
     findJOB.teacher_id.push(teacher_id)
-    findJOB.remark.push('')
-    findJOB.save()
+    const index = findJOB.teacher_id.indexOf(previousTeacher_id);
+    findJOB.remark[index] = cancellationReason
+    await findJOB.save({validateBeforeSave:false})
 
     return res
         .status(200)
@@ -681,6 +691,81 @@ const leadStatusData = asyncHandler(async (req, res) => {
 
 })
 
+const getLeadInfo = asyncHandler(async (req, res) => {
+    const { leadID } = req.query
+
+    if (!leadID) {
+        throw new ApiError(400, 'Lead ID is Required')
+    }
+
+    const findLeadInfo = await Lead.aggregate([
+        {
+            $match: {
+                leadID: leadID
+            }
+        },
+        {
+            $lookup: {
+                from: 'jobs',
+                localField: 'leadID',
+                foreignField: 'leadID',
+                as: 'jobInfo'
+            }
+        },
+        {
+            $unwind: {
+                path: '$jobInfo',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: 'teachers',
+                localField: 'jobInfo.teacher_id', // array of teacher IDs
+                foreignField: 'teacher_id',               // or teacherID (use correct field)
+                as: 'teacherDetails'
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                leadID: 1,
+                email: 1,
+                employeeCode: 1,
+                mobile: 1,
+                leadType: 1,
+                leadStatus: 1,
+                longitude: 1,
+                latitude: 1,
+                address: 1,
+                alternateNo: 1,
+                leadDates: 1,
+                leadSource: 1,
+                name: 1,
+                report_id: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                teacher_id: '$jobInfo.teacher_id',
+                jobID: '$jobInfo.jobID',
+                studentID: '$jobInfo.studentID',
+                remark: '$jobInfo.remark',
+                teacherDetails: 1 // full teacher documents
+            }
+        }
+    ]);
+
+
+    if (!findLeadInfo || findLeadInfo.length === 0) {
+        throw new ApiError(404, 'Lead not found')
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, { leadInfo: findLeadInfo[0] }, 'Lead Info fetched successfully')
+        )
+})
+
 export {
     createLead,
     allotLeads,
@@ -693,5 +778,6 @@ export {
     getAllLeadsDetails,
     updateRequirement,
     assignTeachers,
-    leadStatusData
+    leadStatusData,
+    getLeadInfo
 }
