@@ -616,7 +616,36 @@ const updateRequirement = asyncHandler(async (req, res) => {
 })
 
 const assignTeachers = asyncHandler(async (req, res) => {
+
     const { leadID, teacher_id, previousTeacher_id, cancellationReason } = req.body
+
+    if (!previousTeacher_id) {
+        
+        if (!leadID || !teacher_id) {
+            throw new ApiError(400, 'Required Input of LeadID and TeacherID')
+        }
+        const findTeacher = await Teacher.findOne({ teacher_id: teacher_id })
+
+        if (!findTeacher) {
+            throw new ApiError(403, 'Teacher Not Found')
+        }
+
+        const findJOB = await Job.findOne({ leadID: leadID })
+
+        if (!findJOB) {
+            throw new ApiError(404, 'Job ID not found')
+        }
+
+        findJOB.teacher_id.push(teacher_id)
+        findJOB.remark.push('')
+        await findJOB.save({ validateBeforeSave: false })
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, {}, 'Teacher Assigned Successfully')
+            )
+    }
 
     if (
         [leadID, teacher_id, previousTeacher_id, cancellationReason].some(item => item === '' || !item)
@@ -649,12 +678,12 @@ const assignTeachers = asyncHandler(async (req, res) => {
     findJOB.teacher_id.push(teacher_id)
     const index = findJOB.teacher_id.indexOf(previousTeacher_id);
     findJOB.remark[index] = cancellationReason
-    await findJOB.save({validateBeforeSave:false})
+    await findJOB.save({ validateBeforeSave: false })
 
     return res
         .status(200)
         .json(
-            new ApiResponse(200, {}, 'Teacher Assigned Successfully')
+            new ApiResponse(200, {}, 'Teacher Updated Successfully')
         )
 })
 
