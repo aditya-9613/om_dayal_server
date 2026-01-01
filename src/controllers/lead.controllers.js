@@ -229,7 +229,44 @@ const postRequirement = asyncHandler(async (req, res) => {
 
 const getAllLeads = asyncHandler(async (req, res) => {
 
-    const leads = await Lead.find()
+    const leads = await Lead.aggregate([
+        {
+            $lookup: {
+                from: "jobs",
+                localField: "leadID",
+                foreignField: "leadID",
+                as: "jobInfo"
+            }
+        },
+        {
+            $unwind: {
+                path: "$jobInfo",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                leadID: 1,
+                email: 1,
+                employeeCode: 1,
+                mobile: 1,
+                leadType: 1,
+                leadStatus: 1,
+                longitude: 1,
+                latitude: 1,
+                address: 1,
+                alternateNo: 1,
+                leadDates: 1,
+                leadSource: 1,
+                name: 1,
+                report_id: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                teacher_id: "$jobInfo.teacher_id"
+            }
+        }
+    ])
 
     if (!leads) {
         throw new ApiError(404, 'No leads found')
@@ -433,73 +470,6 @@ const updateLeadsExcel = asyncHandler(async (req, res) => {
                 isUnique = true;
             }
         }
-        /*
-        
-address
-: 
-"New Garia, Near Eden flora Complex"
-alternateNo
-: 
-"9051224629"
-boards
-: 
-"CBSE"
-budget
-: 
-"Will be discussed after Demo class"
-class
-: 
-"11"
-duration
-: 
-"1hour 30minutes"
-email
-: 
-"Nil"
-employeeCode
-: 
-"OMD08"
-fatherName
-: 
-"Nil"
-genderPreference
-: 
-"No"
-leadDates
-: 
-(2) [Mon Sep 22 2025 05:30:00 GMT+0530 (India Standard Time), Mon Sep 22 2025 05:30:00 GMT+0530 (India Standard Time)]
-leadSource
-: 
-"third party"
-leadStatus
-: 
-(2) ['New', 'Open']
-leadType
-: 
-"New"
-mobile
-: 
-"9051224629"
-motherName
-: 
-"Nil"
-name
-: 
-"Pranab Mondal"
-sitting
-: 
-"1"
-studentClass
-: 
-"11"
-subjects
-: 
-"Math,Physics"
-teacherName
-: 
-['Nil']
-tutionPlace
-        */
 
         const createLead = await Lead.create({
             leadID: leadID,
@@ -620,7 +590,7 @@ const assignTeachers = asyncHandler(async (req, res) => {
     const { leadID, teacher_id, previousTeacher_id, cancellationReason } = req.body
 
     if (!previousTeacher_id) {
-        
+
         if (!leadID || !teacher_id) {
             throw new ApiError(400, 'Required Input of LeadID and TeacherID')
         }
