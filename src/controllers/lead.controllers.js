@@ -528,7 +528,7 @@ const updateLeadsExcel = asyncHandler(async (req, res) => {
 })
 
 const updateRequirement = asyncHandler(async (req, res) => {
-    const { leadID, name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference } = req.body.updatedData
+    const { leadID, name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference } = req.body
 
     if (
         [name, fatherName, motherName, email, mobile, alternateNo, address, tutionPlace, studentClass, boards, subjects, sitting, duration, budget, genderPreference].some(item => item === '' || item === undefined)
