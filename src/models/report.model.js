@@ -18,14 +18,6 @@ const ReportSchema = new Schema({
         type: Date,
         required: true
     },
-    reportAbstract:{
-        type:String,
-        required:true
-    },
-    leadID:{
-        type: String,
-        required: true
-    },
     reportDescription:{
         type: String,
         required: true

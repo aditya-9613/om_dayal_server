@@ -34,17 +34,23 @@ export const generateTeacherID = () => {
 }
 
 export function generateReportId(reportName) {
-  // Extract report type and date from the name
-  // Example: "EODReports-03/10/2025" -> ["EODReports", "03/10/2025"]
-  const parts = reportName.split('-');
-  const reportType = parts[0].replace('Reports', ''); // "EOD", "Teacher", "Lead"
-  const dateStr = parts[1];    // "03/10/2025"
-  
-  // Convert date: 03/10/2025 -> 03102025
-  const cleanDate = dateStr.replace(/\//g, '');
-  
-  // Create report ID: EOD123_03102025 or Teacher456_03102025
-  const reportId = `${reportType}_${cleanDate}`;
-  
-  return reportId;
+    
+    const code = reportName
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z ]/g, '')
+        .split(' ')
+        .map(word => word[0])
+        .join('');
+
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    // Last 3 digits of timestamp for uniqueness
+    const unique = String(now.getTime()).slice(-3);
+
+    return `${code}-${year}${month}${day}-${unique}`;
 }

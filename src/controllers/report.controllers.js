@@ -8,23 +8,19 @@ import { generateReportId } from '../utils/CreateIDs.js'
 
 
 const createReport = asyncHandler(async (req, res) => {
-    const { reportName, employeeCode, reportDate, reportAbstract, leadID, reportDescription } = req.body
+
+    const { reportName, employeeCode, reportDate, reportDescription } = req.body
 
     const { supportingDocument } = req.files
 
     if (
-        [reportName, employeeCode, reportDate, reportAbstract, leadID, reportDescription].some((item) =>
+        [reportName, employeeCode, reportDate, reportDescription].some((item) =>
             item === '' || item === undefined)
     ) {
         throw new ApiError(400, 'Required Fields')
     }
 
-    if (supportingDocument.length === 0) {
-        throw new ApiError(400, 'Required Input');
-
-    }
-
-    const findPreviousReport = await Report.findOne({ reportName: reportName })
+    const findPreviousReport = await Report.findOne({ reportName: reportName, reportDate: reportDate })
 
     if (findPreviousReport) {
         throw new ApiError(409, 'Report Already Submitted')
@@ -34,17 +30,19 @@ const createReport = asyncHandler(async (req, res) => {
 
     var imageLinks = await Promise.all(
         supportingDocument.map(item =>
-            uploadOnCloudinary(item.path).then(res => res.secure_url)
+            uploadOnCloudinary(item.path)
+                .then(res => res.secure_url)
+                .catch(err => {
+                    throw new ApiError(500, err);
+                })
         )
-    )
+    );
 
     const createReport = await Report.create({
         report_id,
         reportName,
         employeeCode,
         reportDate,
-        reportAbstract,
-        leadID,
         reportDescription,
         supportingDocument: imageLinks
     })
@@ -52,10 +50,6 @@ const createReport = asyncHandler(async (req, res) => {
     if (!createReport) {
         throw new ApiError(500, 'Server Error')
     }
-
-    const leads = await Lead.findOne({ leadID: leadID })
-    leads.report_id.push(report_id)
-    leads.save()
 
     return res
         .status(200)
@@ -66,7 +60,7 @@ const createReport = asyncHandler(async (req, res) => {
 
 const searchReport = asyncHandler(async (req, res) => {
 
-    const { report_id } = req.querry
+    const { report_id } = req.query
 
     if (report_id === '') {
         throw new ApiError(400, 'Required Fields')
