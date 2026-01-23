@@ -389,6 +389,31 @@ const commentTeacher = asyncHandler(async (req, res) => {
         )
 })
 
+const teacherSearchWithIdName = asyncHandler(async (req, res) => {
+
+    const { params } = req.query
+
+    const findTeachers = await Teacher.find({
+        $or: [
+            { teacher_id: { $regex: params, $options: 'i' } },
+            { teacherName: { $regex: params, $options: 'i' } }
+        ]
+    });
+
+
+    if (findTeachers.length === 0) {
+        throw new ApiError(404, 'No Teacher Found')
+    }
+
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, { teacher: findTeachers }, 'Teacher List')
+        )
+})
+
+
 export {
     createTeacher,
     updateTeacherDetails,
@@ -397,5 +422,6 @@ export {
     searchTeachersWithID,
     updateTeacherStatus,
     updateTeacherExcel,
-    commentTeacher
+    commentTeacher,
+    teacherSearchWithIdName
 }
