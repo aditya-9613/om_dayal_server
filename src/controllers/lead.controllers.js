@@ -629,7 +629,7 @@ const assignTeachers = asyncHandler(async (req, res) => {
 
     const findLead = await Lead.findOne({ leadID: leadID })
 
-    if (!findLead || (findLead.status[findLead.status.length - 1] === 'Cancelled' || findLead.status[findLead.status.length - 1] === 'Archived' || findLead.status[findLead.status.length - 1] === 'Fixed')) {
+    if (!findLead || (findLead.leadStatus[findLead.leadStatus.length - 1] === 'Cancelled' || findLead.leadStatus[findLead.leadStatus.length - 1] === 'Archived' || findLead.leadStatus[findLead.leadStatus.length - 1] === 'Fixed')) {
         throw new ApiError(400, 'You cannot assign teacher to cancelled,archived or fixed leads please change the lead status first')
     }
 
